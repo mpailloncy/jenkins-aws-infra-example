@@ -1,0 +1,4 @@
+**/*.retry
+**/.terraform/
+*-key*
+**/*tfstate*
