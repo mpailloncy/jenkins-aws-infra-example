@@ -1,0 +1,10 @@
+= TODO
+
+* create and allocate an EBS volume for the Jenkins master
+* Dynamically configure AWS EC2 Jenkins master plugin (see init.groovy)
+* create a bastion machine to config-manage others machines using Ansible => disable ssh access to jenkins master
+* add a third private subnet dedicated to jenkins agents, remove jenkins master from public subnet and create a dedicated reverse-proxy inside public subnet
+* manage backups
+* manage monitoring (Datadog ?)
+* Auto renewal of Letsencrypt certificates
+* Allow multiple infrastructure creation + provisioning (with a "count" variable)

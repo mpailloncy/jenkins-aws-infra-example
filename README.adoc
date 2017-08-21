@@ -1,0 +1,79 @@
+= Jenkins infrastructure on AWS
+
+== About
+
+This repository contains all the stuff needed to provision a Jenkins infrastructure on AWS cloud, inside a dedicated VPC.
+
+Jenkins master is available through HTTPS (using Let's Encrypt) and agents are created inside the virtual private cloud (and only available through it).
+All machines are provisioned using Terraform, Ansible and Docker.
+
+NOTE: this is an experimentation :-)
+
+== Prerequisites
+
+It's assume that :
+
+* you have ansible and terraform installed locally (tested with Ansible 2.3.2.0 and Terraform 0.10.0)
+* variables `TF_VAR_aws_access_key` and `TF_VAR_aws_secret_key` are exported in the current shell
+
+== First steps
+
+* Create two SSH key pairs in the root of this repository :
+** `provisioner-key` : key pair used during the provisioning part (terraform + ansible)
+** `jenkins-infra-key` : key pair used to establish the connection between Jenkins master and its agents
+
+These two files will be declared as AWS key pairs by Terraform.
+
+* Create a file `vars.vault` inside `config-management` directory based on the content of `config-management/vars.vault.example`:
+
+[source,shell]
+$> ansible-vault create config-management/vars.vault
+
+== Provisioning using Terraform
+
+[source,shell]
+$>  export TF_VAR_aws_access_key="MY_ACCESS_KEY"
+$>  export TF_VAR_aws_secret_key="MY_SUPER_SECREY_KEY"
+$> cd infrastructure
+$> terraform plan
+$> terraform apply
+
+NOTE: at this point, I've manually added a new entry in my DNS to target the public ip address of the created EC2 instance. Let's assume that "ilovejenkins.pailloncy.fr" matchs your hostname. Must be automated later :-)
+
+Then, try to connect on the created EC2 instance :
+
+[source,shell]
+$> cd -
+$> ssh -i provisioner-key ubuntu@ilovejenkins.pailloncy.fr
+
+== Configuration Management using Ansible
+
+[source,shell]
+$> cd config-management
+$> ansible-playbook -i hosts jenkins-master.yml --ask-vault-pass
+
+=== Reverse proxy
+
+A reverse proxy will be created with Nginx and a Let's Encrypt certificate will be automatically generated.
+
+See `config-management/jenkins-master.yml` playbook to specify hostname/admin email.
+
+=== Jenkins master Docker image
+
+A dedicated Jenkins Docker image has been created with all necessary plugins.
+
+This Docker image is based on the official https://hub.docker.com/r/jenkins/jenkins/[Jenkins Docker image].
+
+It embeds a basic authentication configuration and a set of default plugins needed to set up a Jenkins master with dynamic agents on AWS.
+
+All the basic configuration is done using `init.groovy` file. This file is executed during Jenkins startup.
+It permits to :
+
+* Create a new user with provided login/password
+* Configure Maven 3 (auto installation)
+
+All needed plugin are listed inside `plugins-list.txt` file.
+
+When you want to get latest versions of all these plugins, execute `display-latest-version-of-all-plugins.sh` file and replace all corresponding version inside the `Dockerfile`.
+
+This image has already been built and push to https://hub.docker.com/r/mpapo/jenkins-aws/[Docker hub].
