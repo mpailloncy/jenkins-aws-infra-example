@@ -1,0 +1,100 @@
+- name: Update apt cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: apt via https
+  apt:
+    name: apt-transport-https
+    state: present
+
+- name: Install nginx
+  apt:
+    name: nginx
+    state: installed
+
+- name: remove default nginx default
+  file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+
+- name: check if dhparams file exists
+  stat:
+    path: /etc/ssl/certs/dhparam.pem
+  register: dhparams_file
+
+- name: Generate dhparams file
+  shell: openssl dhparam -out /etc/ssl/certs/dhparam.pem 2048
+  when: dhparams_file.stat.exists == False
+
+- name: Install depends
+  apt: name={{ item }} state=latest
+  with_items:
+    - ca-certificates
+    - git
+    - python
+    - python-dev
+    - gcc
+    - dialog
+    - libaugeas0
+    - augeas-lenses
+    - libffi-dev
+    - libssl-dev
+    - python-pip
+    - python-virtualenv
+    - libpython-dev
+    - zlib1g-dev
+
+- name: Lets Encrypt client
+  git:
+    dest: /opt/certbot
+    clone: yes
+    repo: https://github.com/certbot/certbot
+    force: yes
+
+- name: Add http nginx configuration
+  template:
+    src: templates/http.conf.j2
+    dest: /etc/nginx/sites-available/{{ service_name }}.http.conf
+    owner: www-data
+    group: www-data
+    mode: 0644
+
+- name: Add http nginx symlink
+  file:
+    src: /etc/nginx/sites-available/{{ service_name }}.http.conf
+    dest: /etc/nginx/sites-enabled/{{ service_name }}.http
+    owner: www-data
+    group: www-data
+    state: link
+
+- name: reload nginx
+  service:
+    name: nginx
+    state: reloaded
+
+- name: Create certificate
+  shell: ./certbot-auto certonly -n --webroot --email {{ admin.email }} --agree-tos --webroot-path=/usr/share/nginx/html -d {{ hostname }};
+  args:
+    chdir: /opt/certbot
+
+- name: Add https nginx configuration
+  template:
+    src: templates/https.conf.j2
+    dest: /etc/nginx/sites-available/{{ service_name }}.https.conf
+    owner: www-data
+    group: www-data
+    mode: 0644
+
+- name: Add external https nginx symlink
+  file:
+    src: /etc/nginx/sites-available/{{ service_name }}.https.conf
+    dest: /etc/nginx/sites-enabled/{{ service_name }}.https
+    owner: www-data
+    group: www-data
+    state: link
+
+- name: reload nginx
+  service:
+    name: nginx
+    state: reloaded

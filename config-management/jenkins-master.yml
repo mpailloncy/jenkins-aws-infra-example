@@ -1,0 +1,42 @@
+---
+- hosts: master
+  become: yes
+
+  vars:
+    service_name: "jenkins"
+    hostname: "ilovejenkins.pailloncy.fr"
+    jenkins:
+      image: mpapo/jenkins-aws
+      folder: /jenkins_data
+      numexecutors: 4
+
+  tasks:
+
+    - name: load vaulted variable
+      include_vars: vars.vault
+
+    - include: reverse-proxy-https.yml
+      vars:
+        letsencrypt_ssl_dir: "/etc/letsencrypt/live"
+
+    - name: install docker-py
+      pip:
+        name: docker-py
+
+    - name: start jenkins master
+      docker_container:
+        name: jenkins-master
+        image: "{{ jenkins.image }}"
+        pull: True
+        state: started
+        restart_policy: unless-stopped
+        published_ports:
+          - 127.0.0.1:8080:8080
+        env:
+          jenkins_url: "https://{{ hostname }}"
+          admin_username: "{{ admin.username }}"
+          admin_password: "{{ admin.password }}"
+          admin_email: "{{ admin.email }}"
+          master_numexecutors: "{{ jenkins.numexecutors }}"
+      tags:
+        - jenkins

@@ -1,0 +1,2 @@
+[master]
+ilovejenkins.pailloncy.fr ansible_ssh_user=ubuntu
