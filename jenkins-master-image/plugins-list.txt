@@ -1,0 +1,12 @@
+workflow-aggregator
+pipeline-stage-view
+workflow-multibranch
+pipeline-utility-steps
+pipeline-model-definition
+pipeline-maven
+blueocean
+github-branch-source 
+cloudbees-bitbucket-branch-source
+ec2
+buildtriggerbadge
+ssh-agent
