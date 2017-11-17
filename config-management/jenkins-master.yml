@@ -6,7 +6,7 @@
     service_name: "jenkins"
     hostname: "ilovejenkins.pailloncy.fr"
     jenkins:
-      image: mpapo/jenkins-aws
+      image: mpapo/jenkins-aws:2.73.3-alpine
       folder: /jenkins_data
       numexecutors: 4
 
